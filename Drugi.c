@@ -47,7 +47,7 @@ int unosP(Pozicija P) {
 int Ispis(Pozicija P) {
 	while (P != NULL) {
 		printf("\nIme: %s\n", P->ime);
-		printf("\Prezime: %s", P->prezime);
+		printf("\nPrezime: %s", P->prezime);
 		printf("\nGodina: %d", P->godina);
 		P = P->next;
 	}
