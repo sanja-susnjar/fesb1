@@ -27,7 +27,7 @@ int CitajIzDat(Pozicija);
 int main() {
 	Osoba head;
 	head.next = NULL;
-	Pozicija q=NULL;
+	
 	int odabir;
 	do {
 		printf("\n\nOdaberite opciju: ");
@@ -77,7 +77,7 @@ int main() {
 			UpisUDat(head.next);
 			break;
 		case 10:
-			CitajIzDat(q);
+			CitajIzDat(head.next);
 			break;
 		}
 	} while (odabir != 0);
