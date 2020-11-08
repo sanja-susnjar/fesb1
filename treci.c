@@ -244,9 +244,10 @@ int UpisUDat(Pozicija P) {
 }
 
 int CitajIzDat(Pozicija P) {
+	Pozicija a;
+	a = (Pozicija)malloc(sizeof(Osoba));
 	FILE* fp;
 	char ime[20];
-	P =(Pozicija) malloc(sizeof(Osoba));
 	int i, br = 0;
 	
 	printf("Ime datoteke? \n");
@@ -262,10 +263,11 @@ int CitajIzDat(Pozicija P) {
 			br++;
 		}
 	}
-	printf("\nCitanje iz datoteke:\n");
+	fseek(fp, 0, SEEK_SET);
+	
 	for (i = 0; i < br; i++) {
-		fscanf(fp, "%s %s %d\n", P->ime, P->prezime, &P->godina);
-		printf("%s %s %d\n", P->ime, P->prezime, P->godina);
+		fscanf(fp, "%s %s %d\n", a->ime, a->prezime, &a->godina);
+		printf("%s %s %d\n", a->ime, a->prezime, a->godina);
 	}
 	fclose(fp);
 
