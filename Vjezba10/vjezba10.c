@@ -1,174 +1,229 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include<stdio.h>
-#include<stdlib.h>
-#include<malloc.h>
-#include<string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#define ALLOCATION_ERROR "\n\n***Allocation error***\n\n"
+#define FOPENERROR "\n\n***File open error***\n\n"
+#define FCLOSEERROR "\n\n***File close error***\n\n"
 
-#define LINE_LEN 1024
-#define WORD_LEN 55
+typedef struct Tree {
+	char expression;
+	struct Tree* left;
+	struct Tree* right;
+}_Tree;
 
-typedef struct _stablo{
-    char element[LINE_LEN];
+typedef struct TreeStack {
+	_Tree* expression;
+	struct TreeStack* next;
+}_TreeStack;
 
-    struct _stablo *left;
-    struct _stablo *right;
-}Stablo;
-
-typedef struct _stog{
-    char element[LINE_LEN];
-
-    struct _stog *next;
-}Stog;
-
-int readFile(Stog*);
-int loadPostfix(Stog*, char*);
-int Push(Stog*, char*);
-char* Pop(Stog*);
-Stablo* stogToTree(Stog*, Stablo*);
-Stablo* create();
-int isOperand(char);
-int print(Stablo*);
+_TreeStack* AllocationStack(_TreeStack* element, char* buffer);
+_Tree* AllocationTree(_Tree* element);
+_Tree* TreeLeftLinker(_Tree* firstElement, _Tree* secondElement);
+_Tree* TreeRightLinker(_Tree* firstElement, _Tree* secondElement);
+char* ReadFromFile(char* buffer);
+int BufferElementCheck(char* buffer, _TreeStack* head);
+int IsNumOrExpression(char bufferElement);
+int IsNotNum(_TreeStack* head, char bufferElement, char* buffer);
+int PushNode(_Tree* expressionNode, _TreeStack* head, char* buffer);
+int Push(_TreeStack* head, char bufferElement);
+_TreeStack* StackLinker(_TreeStack* firstElement, _TreeStack* secondElement);
+_Tree* PopStack(_TreeStack* head);
+_Tree* PrintToArray(_Tree* startPosition, char* inorderArray, int* i);
 
 int main()
 {
-    Stog* head = (Stog*)malloc(sizeof(Stog));
-    head->next = NULL;
-    Stablo* root = NULL;
+	char buffer[1024] = { 0 };
+	char inorderArray[1024] = { 0 };
+	int i = 0;
+	_TreeStack* head = NULL;
 
-    readFile(head);
-    root = stogToTree(head, root);
-    print(root);
+	ReadFromFile(&buffer);
+	head = AllocationStack(head, NULL);
 
-    return 0;
+
+	BufferElementCheck(buffer, head);
+
+	PrintToArray(head->next->expression, inorderArray, &i);
+
+	PrintToFile(inorderArray, i);
+
 }
-
-int readFile(Stog* head)
+_Tree* AllocationTree(_Tree* element)//NULL -> Allocation error; Element -> All good;
 {
-    FILE *fp = NULL;
-    char* filename = (char*)malloc(sizeof(char)*WORD_LEN);
+	element = (_Tree*)malloc(sizeof(_Tree));
+	if (element == NULL) {
+		printf("%s", ALLOCATION_ERROR);
+		return NULL;
+	}
+	element->left = NULL;
+	element->right = NULL;
+	element->expression = 0;
 
-    printf("Koju datoteku zelite otvoriti?\n");
-    scanf("%s", filename);
-
-    if(strchr(filename, '.') == 0)
-        strcat(filename, ".txt");
-
-    fp = fopen(filename, "r");
-
-    if(fp == NULL){
-        printf("\nERROR! File could not open!");
-        return -1;
-    }
-
-    char *line = (char*)malloc(sizeof(char)*LINE_LEN);
-
-    fgets(line, LINE_LEN, fp);
-
-    loadPostfix(head, line);
-
-    return 0;
+	return element;
 }
-
-int loadPostfix(Stog* head, char* line)
+_TreeStack* AllocationStack(_TreeStack* element, char* buffer)//NULL -> Allocation error; Element -> All good;
 {
-    int n;
-    char* znak = (char*)malloc(sizeof(char)*LINE_LEN);
+	element = (_TreeStack*)malloc(sizeof(_TreeStack));
+	if (element == NULL) {
+		printf("%s", ALLOCATION_ERROR);
+		return NULL;
+	}
+	element->next = NULL;
+	element->expression = 0;
 
-    while(sscanf(line, "%s %n", &n, znak) == 1){
-        Push(head, znak);
-        line += n;
-        n = 0;
-    }
-
-    return 0;
-}   
-
-int Push(Stog* head, char* znak)
-{   
-    Stog* p = (Stog*)malloc(sizeof(Stog));
-
-    if(p == NULL)
-        return -1;
-
-    p->next = head->next;
-    head->next = p;
-    strcpy(p->element, znak);
-
-    return 0;
+	return element;
 }
-
-char* Pop(Stog* head)
+_Tree* TreeLeftLinker(_Tree* firstElement, _Tree* secondElement)
 {
-    Stog* pomocni = (Stog*)malloc(sizeof(Stog));
-    char* temp = (char*)malloc(sizeof(char)*LINE_LEN);
+	//secondElement->left = firstElement->left;
+	firstElement->left = secondElement;
 
-    if(head->next == NULL || pomocni == NULL || temp == NULL){
-        printf("\nERROR!");
-        return NULL;
-    }
-
-    pomocni = head->next;
-    strcpy(temp, pomocni->element);
-    head->next = pomocni->next;
-    free(pomocni);
-
-    return temp;
+	return firstElement;
 }
-
-Stablo* stogToTree(Stog* head, Stablo* root)
+_Tree* TreeRightLinker(_Tree* firstElement, _Tree* secondElement)
 {
-    char* string;
+	//secondElement->right = firstElement->right;
+	firstElement->right = secondElement;
 
-    string = Pop(head);
-
-    root = create();
-
-    strcpy(root->element, string);
-
-    if(isOperand(root->element[0])){
-        root->right = stogToTree(head, root->right);
-        root->left = stogToTree(head, root->left);
-    }
-
-    return root;
+	return firstElement;
 }
-
-Stablo* create()
+char* ReadFromFile(char* buffer)
 {
-    Stablo* new = (Stablo*)malloc(sizeof(Stablo));
-    new->left = NULL;
-    new->right = NULL;
+	FILE* postfixFile = fopen("postfix.txt", "r");
+	/*char buffer[1024] = { 0 };*/
 
-    return new;
+	if (postfixFile == NULL) {
+		printf("%s", FOPENERROR);
+		return -1;
+	}
+
+	fgets(buffer, 1024, postfixFile);
+
+	if (fclose(postfixFile) == EOF) {
+		printf("%s", FCLOSEERROR);
+		return -1;
+	}
+
+	return buffer;
 }
-
-int isOperand(char simbol)
+int BufferElementCheck(char* buffer, _TreeStack* head)
 {
-    if(simbol == '+')
-        return 1;
+	char* pointToElementInBuffer = buffer;
+	int i = 0;
+	int numOfBytes = 0;
 
-    else if(simbol == '-')
-        return 1;
-
-    else if(simbol == '*')
-        return 1;
-
-    else if(simbol == '/')
-        return 1;
-
-    return 0;
+	do {
+		if (*(buffer + i) != ' ' && IsNumOrExpression(*(buffer + i))) {
+			Push(head, *(buffer + i));
+		}
+		else if (*(buffer + i) != ' ' && IsNumOrExpression(*(buffer + i)) == 0) {
+			IsNotNum(head, *(buffer + i), buffer);
+		}
+		i++;
+	} while (*(buffer + i) != '\0');
 }
-
-int print(Stablo* root)
+int IsNumOrExpression(char bufferElement)
 {
-    if(!root)
-        return 0;
+	return isdigit(bufferElement);
+}
+int IsNotNum(_TreeStack* head, char bufferElement, char* buffer)
+{
+	_Tree* firstPopedElement = PopStack(head);
+	_Tree* secondPopedElement = PopStack(head);
+	_Tree* node = NULL;
 
-    printf("(");
-    print(root->left);
-    printf("%s", root->element);
-    print(root->right);
-    printf(")");
+	node = AllocationTree(node);
+	node->expression = bufferElement;
 
-    return 0;
+	TreeLeftLinker(node, secondPopedElement);
+	TreeRightLinker(node, firstPopedElement);
+
+	PushNode(node, head, buffer);
+
+	return 0;
+}
+int PushNode(_Tree* expressionNode, _TreeStack* head, char* buffer)
+{
+	_TreeStack* element = NULL;
+
+	element = AllocationStack(element, buffer);
+	if (element == NULL)
+		return -1;
+
+	element->expression = expressionNode;
+
+	StackLinker(head, element);
+
+	return 0;
+}
+int Push(_TreeStack* head, char bufferElement) //Return: -1 -> Allocation error; element->number -> All good
+{
+	_TreeStack* element = NULL;
+	_Tree* node = NULL;
+
+	element = AllocationStack(element, NULL);
+	if (element == NULL)
+		return -1;
+
+	node = AllocationTree(node);
+	node->expression = bufferElement;
+	element->expression = node;
+
+	StackLinker(head, element);
+
+	return 0;
+}
+_TreeStack* StackLinker(_TreeStack* firstElement, _TreeStack* secondElement)
+{
+	secondElement->next = firstElement->next;
+	firstElement->next = secondElement;
+
+	return firstElement;
+}
+_Tree* PopStack(_TreeStack* head)
+{
+	_TreeStack* element = NULL;
+
+	element = head->next->expression;
+	head->next = head->next->next;
+
+	return element;
+}
+_Tree* PrintToArray(_Tree* startPosition, char* inorderArray, int* i)
+{
+	if (startPosition == NULL)
+		return 1;
+
+	PrintToArray(startPosition->right, inorderArray, i);
+
+	*i = StoreInArray(startPosition->expression, inorderArray, i);
+
+	PrintToArray(startPosition->left, inorderArray, i);
+}
+int StoreInArray(char expression, char* inorderArray, int* i)
+{
+	int index = *i;
+
+	inorderArray[index] = expression;
+	return *i + 1;
+}
+int PrintToFile(char* opositeInorderArray, int i)
+{
+	FILE* inorderFile = fopen("inorder.txt", "w");
+	int j = 0;
+
+	if (inorderFile == NULL) {
+		printf("%s", FOPENERROR);
+		return -1;
+	}
+	
+	for (j = 1; j < i + 1; j++)
+		fprintf(inorderFile, "%c ", opositeInorderArray[i - j]);
+
+	if (fclose(inorderFile) == EOF) {
+		printf("%s", FCLOSEERROR);
+		return -1;
+	}
 }
